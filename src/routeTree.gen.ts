@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as ClimbTokenRouteImport } from './routes/climb.$token'
+import { Route as ScoreboardCompetitionIdRouteImport } from './routes/scoreboard.$competitionId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -28,34 +30,59 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/admin/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ClimbTokenRoute = ClimbTokenRouteImport.update({
+  id: '/climb/$token',
+  path: '/climb/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ScoreboardCompetitionIdRoute = ScoreboardCompetitionIdRouteImport.update({
+  id: '/scoreboard/$competitionId',
+  path: '/scoreboard/$competitionId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/climb/$token': typeof ClimbTokenRoute
+  '/scoreboard/$competitionId': typeof ScoreboardCompetitionIdRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/climb/$token': typeof ClimbTokenRoute
+  '/scoreboard/$competitionId': typeof ScoreboardCompetitionIdRoute
   '/admin': typeof AdminIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/climb/$token': typeof ClimbTokenRoute
+  '/scoreboard/$competitionId': typeof ScoreboardCompetitionIdRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/admin/'
+  fullPaths:
+    '/' | '/auth' | '/climb/$token' | '/scoreboard/$competitionId' | '/admin/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/admin'
-  id: '__root__' | '/' | '/auth' | '/admin/'
+  to: '/' | '/auth' | '/climb/$token' | '/scoreboard/$competitionId' | '/admin'
+  id:
+    | '__root__'
+    | '/'
+    | '/auth'
+    | '/climb/$token'
+    | '/scoreboard/$competitionId'
+    | '/admin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
+  ClimbTokenRoute: typeof ClimbTokenRoute
+  ScoreboardCompetitionIdRoute: typeof ScoreboardCompetitionIdRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
@@ -82,12 +109,28 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/climb/$token': {
+      id: '/climb/$token'
+      path: '/climb/$token'
+      fullPath: '/climb/$token'
+      preLoaderRoute: typeof ClimbTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/scoreboard/$competitionId': {
+      id: '/scoreboard/$competitionId'
+      path: '/scoreboard/$competitionId'
+      fullPath: '/scoreboard/$competitionId'
+      preLoaderRoute: typeof ScoreboardCompetitionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
+  ClimbTokenRoute: ClimbTokenRoute,
+  ScoreboardCompetitionIdRoute: ScoreboardCompetitionIdRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
 export const routeTree = rootRouteImport
