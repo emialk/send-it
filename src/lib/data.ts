@@ -4,6 +4,7 @@ import type {
   ClimbingRoute,
   Competition,
   Competitor,
+  CompetitorContext,
   RouteResult,
 } from "./db-types";
 
