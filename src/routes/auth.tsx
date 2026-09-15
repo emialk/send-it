@@ -69,6 +69,7 @@ function AuthPage() {
               name="email"
               autoComplete="email"
               required
+              onInputCapture={(event) => event.stopPropagation()}
             />
           </Field>
           <Field label="Password">
@@ -78,6 +79,7 @@ function AuthPage() {
               autoComplete={mode === "signin" ? "current-password" : "new-password"}
               required
               minLength={6}
+              onInputCapture={(event) => event.stopPropagation()}
             />
           </Field>
           <Button type="submit" size="lg" className="w-full" disabled={busy}>
