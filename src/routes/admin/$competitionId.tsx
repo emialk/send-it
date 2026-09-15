@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Download, Monitor, QrCode as QrIcon, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -21,16 +21,22 @@ import {
   addCategory,
   addCompetitor,
   addRoute,
+  applyCompetitionTheme,
+  createCompetitionTheme,
+  competitionThemeAssetUrl,
   deleteCategory,
   deleteCompetition,
   deleteCompetitor,
   deleteRoute,
   fetchCompetitionBundle,
+  listMyThemes,
   saveAdminResult,
   subscribeToCompetition,
+  updateCompetitionTheme,
   updateCompetition,
+  uploadCompetitionThemeAsset,
 } from "@/lib/data";
-import type { CompetitionStatus, Competitor } from "@/lib/db-types";
+import type { CompetitionStatus, Competitor, CompetitionTheme } from "@/lib/db-types";
 import { rankCompetitors } from "@/lib/ranking";
 import { boulderConfig } from "@/lib/scoring";
 import { buildCsv, buildJson, downloadFile, slugify } from "@/lib/export";
@@ -67,6 +73,9 @@ function CompetitionAdmin() {
   const { session, loading } = useSession();
   const [tab, setTab] = useState<Tab>("setup");
   const [qrFor, setQrFor] = useState<Competitor | null>(null);
+  const [selectedThemeId, setSelectedThemeId] = useState("");
+  const [faviconFile, setFaviconFile] = useState<File | null>(null);
+  const [backgroundFile, setBackgroundFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (!loading && !session) void navigate({ to: "/auth", replace: true });
@@ -77,6 +86,11 @@ function CompetitionAdmin() {
     queryFn: () => fetchCompetitionBundle(competitionId),
     enabled: Boolean(session),
   });
+  const themes = useQuery({
+    queryKey: ["competition-themes", session?.user.id],
+    queryFn: () => listMyThemes(session!.user.id),
+    enabled: Boolean(session),
+  });
 
   useEffect(() => {
     if (!session) return;
@@ -85,10 +99,11 @@ function CompetitionAdmin() {
   }, [competitionId, session]);
 
   const refresh = () => void queryClient.invalidateQueries({ queryKey: ["competition", competitionId] });
-  const mutate = <T,>(fn: (input: T) => Promise<unknown>, success?: string) =>
-    useMutationSafe(fn, refresh, success);
 
   const now = useServerClock(null);
+  useEffect(() => {
+    setSelectedThemeId(bundle.data?.competition.theme_id ?? "");
+  }, [bundle.data?.competition.theme_id]);
 
   if (bundle.isLoading) return <main className="p-6 text-muted-foreground">Loading…</main>;
   if (bundle.error || !bundle.data) {
@@ -103,6 +118,9 @@ function CompetitionAdmin() {
   }
 
   const { competition, categories, routes, competitors, results } = bundle.data;
+  const theme = bundle.data.theme;
+  const themeList = themes.data ?? [];
+  const selectedTheme = themeList.find((item) => item.id === selectedThemeId) ?? null;
   const ranked = rankCompetitors(competition, routes, competitors, results, categories);
   const cfg = boulderConfig(competition.scoring_config);
 
@@ -308,6 +326,166 @@ function CompetitionAdmin() {
                 <Button type="submit">Save scoring</Button>
               </div>
             </form>
+          </Panel>
+
+          <Panel className="lg:col-span-2">
+            <h2 className="font-display text-2xl">Competition theme</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Save branding once and reuse it across competitions. Assets are public so scoreboard
+              and climber links can load them without sign-in.
+            </p>
+            <Field label="Reusable theme">
+              <Select
+                className="mt-3"
+                value={selectedThemeId}
+                onChange={(event) => {
+                  setSelectedThemeId(event.target.value);
+                  setFaviconFile(null);
+                  setBackgroundFile(null);
+                }}
+              >
+                <option value="">Create a new theme / no theme</option>
+                {themeList.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <form
+              key={`theme-form-${selectedThemeId}`}
+              className="mt-3 grid gap-3 sm:grid-cols-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const form = new FormData(event.currentTarget);
+                const name = String(form.get("themeName") ?? "").trim();
+                if (!name) {
+                  toast.error("Give the theme a name");
+                  return;
+                }
+                void (async () => {
+                  try {
+                    let saved: CompetitionTheme;
+                    if (selectedThemeId) {
+                      if (!selectedTheme) throw new Error("Theme is no longer available");
+                      saved = { ...selectedTheme, name };
+                      await updateCompetitionTheme(selectedThemeId, { name });
+                    } else {
+                      saved = await createCompetitionTheme(session!.user.id, name);
+                      setSelectedThemeId(saved.id);
+                    }
+                    const assetPatch: {
+                      favicon_path?: string;
+                      background_image_path?: string;
+                    } = {};
+                    if (faviconFile) {
+                      assetPatch.favicon_path = await uploadCompetitionThemeAsset(
+                        session!.user.id,
+                        saved.id,
+                        "favicon",
+                        faviconFile,
+                      );
+                    }
+                    if (backgroundFile) {
+                      assetPatch.background_image_path = await uploadCompetitionThemeAsset(
+                        session!.user.id,
+                        saved.id,
+                        "background",
+                        backgroundFile,
+                      );
+                    }
+                    if (Object.keys(assetPatch).length > 0) {
+                      await updateCompetitionTheme(saved.id, assetPatch);
+                    }
+                    if (form.get("applyTheme") === "on") {
+                      await applyCompetitionTheme(competitionId, saved.id);
+                    } else if (competition.theme_id === saved.id) {
+                      await applyCompetitionTheme(competitionId, null);
+                    }
+                    setFaviconFile(null);
+                    setBackgroundFile(null);
+                    await queryClient.invalidateQueries({
+                      queryKey: ["competition-themes", session!.user.id],
+                    });
+                    refresh();
+                    toast.success("Theme saved");
+                  } catch (error) {
+                    toast.error(error instanceof Error ? error.message : "Could not save theme");
+                  }
+                })();
+              }}
+            >
+              <Field label="Theme name">
+                <Input
+                  name="themeName"
+                  defaultValue={selectedTheme?.name ?? ""}
+                  placeholder="Summer series"
+                  required
+                />
+              </Field>
+              <Field label="Favicon" hint="PNG, SVG, ICO or another browser-supported image">
+                <Input
+                  name="favicon"
+                  type="file"
+                  accept="image/*,.ico"
+                  onChange={(event) => setFaviconFile(event.target.files?.[0] ?? null)}
+                />
+                {selectedTheme?.favicon_path ? (
+                  <img
+                    src={competitionThemeAssetUrl(selectedTheme.favicon_path) ?? undefined}
+                    alt="Current favicon"
+                    className="mt-2 h-8 w-8 rounded object-cover"
+                  />
+                ) : null}
+              </Field>
+              <Field
+                label="Background image"
+                hint="A dark overlay is added automatically for contrast"
+              >
+                <Input
+                  name="background"
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => setBackgroundFile(event.target.files?.[0] ?? null)}
+                />
+                {selectedTheme?.background_image_path ? (
+                  <img
+                    src={competitionThemeAssetUrl(selectedTheme.background_image_path) ?? undefined}
+                    alt="Current background"
+                    className="mt-2 h-20 w-full rounded object-cover"
+                  />
+                ) : null}
+              </Field>
+              <label className="flex items-center gap-2 text-sm sm:col-span-2">
+                <input
+                  type="checkbox"
+                  name="applyTheme"
+                  defaultChecked={
+                    selectedThemeId !== "" && selectedThemeId === competition.theme_id
+                  }
+                />
+                Apply this theme to this competition
+              </label>
+              <div className="flex flex-wrap gap-2 sm:col-span-2">
+                <Button type="submit">Save theme</Button>
+                {competition.theme_id ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() =>
+                      void run(() => applyCompetitionTheme(competitionId, null), "Theme removed")
+                    }
+                  >
+                    Use default theme
+                  </Button>
+                ) : null}
+              </div>
+            </form>
+            {theme ? (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Currently applied: {theme.name}
+              </p>
+            ) : null}
           </Panel>
 
           <Panel>
@@ -709,21 +887,4 @@ function CompetitionAdmin() {
       ) : null}
     </main>
   );
-}
-
-/** Placeholder to keep the mutate helper honest without breaking hook rules. */
-function useMutationSafe<T>(
-  fn: (input: T) => Promise<unknown>,
-  onDone: () => void,
-  success?: string,
-) {
-  return useMutation({
-    mutationFn: fn,
-    onSuccess: () => {
-      onDone();
-      if (success) toast.success(success);
-    },
-    onError: (error: unknown) =>
-      toast.error(error instanceof Error ? error.message : "Something went wrong"),
-  });
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { StatusPill } from "@/components/kit";
 import { CompetitionTimer, useServerClock } from "@/components/CompetitionClock";
+import { useCompetitionTheme } from "@/components/CompetitionTheme";
 import { fetchCompetitionBundle, subscribeToCompetition } from "@/lib/data";
 import { rankCompetitors } from "@/lib/ranking";
 
@@ -44,6 +45,7 @@ function Scoreboard() {
   }, [competitionId]);
 
   const now = useServerClock(null);
+  useCompetitionTheme(bundle.data?.theme);
 
   if (bundle.isLoading) {
     return <main className="p-8 text-muted-foreground">Loading scoreboard…</main>;
@@ -59,13 +61,13 @@ function Scoreboard() {
     );
   }
 
-  const { competition, categories, routes, competitors, results } = bundle.data;
+  const { competition, categories, routes, competitors, results, theme } = bundle.data;
   const visibleCompetitors =
     categoryId === "all" ? competitors : competitors.filter((c) => c.category_id === categoryId);
   const ranked = rankCompetitors(competition, routes, visibleCompetitors, results, categories);
 
   return (
-    <main className="min-h-screen px-4 py-6 sm:px-8">
+    <main className="min-h-screen px-4 py-6 sm:px-8" data-theme={theme ? "custom" : "default"}>
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.3em] text-primary">Live standings</p>

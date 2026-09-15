@@ -3,6 +3,7 @@ import type {
   Category,
   ClimbingRoute,
   Competition,
+  CompetitionTheme,
   Competitor,
   CompetitorContext,
   RouteResult,
@@ -10,6 +11,7 @@ import type {
 
 export interface CompetitionBundle {
   competition: Competition;
+  theme: CompetitionTheme | null;
   categories: Category[];
   routes: ClimbingRoute[];
   competitors: Competitor[];
@@ -22,8 +24,13 @@ function unwrap<T>(res: { data: T | null; error: { message: string } | null }): 
 }
 
 export async function fetchCompetitionBundle(competitionId: string): Promise<CompetitionBundle> {
-  const [competition, categories, routes, competitors, results] = await Promise.all([
-    supabase.from("competitions").select("*").eq("id", competitionId).single(),
+  const competition = await supabase
+    .from("competitions")
+    .select("*")
+    .eq("id", competitionId)
+    .single();
+  const competitionRow = unwrap(competition) as Competition;
+  const [categories, routes, competitors, results, theme] = await Promise.all([
     supabase
       .from("categories")
       .select("*")
@@ -37,10 +44,18 @@ export async function fetchCompetitionBundle(competitionId: string): Promise<Com
       .eq("competition_id", competitionId)
       .order("competitor_number"),
     supabase.from("route_results").select("*").eq("competition_id", competitionId),
+    competitionRow.theme_id
+      ? supabase
+          .from("competition_themes")
+          .select("id, name, favicon_path, background_image_path, created_at, updated_at")
+          .eq("id", competitionRow.theme_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
   ]);
 
   return {
-    competition: unwrap(competition) as Competition,
+    competition: competitionRow,
+    theme: (unwrap(theme) ?? null) as CompetitionTheme | null,
     categories: (unwrap(categories) ?? []) as Category[],
     routes: (unwrap(routes) ?? []) as ClimbingRoute[],
     competitors: (unwrap(competitors) ?? []) as Competitor[],
@@ -67,6 +82,68 @@ export async function listPublicCompetitions(): Promise<Competition[]> {
   return (unwrap(res) ?? []) as Competition[];
 }
 
+export async function listMyThemes(ownerId: string): Promise<CompetitionTheme[]> {
+  const res = await supabase
+    .from("competition_themes")
+    .select("*")
+    .eq("owner_id", ownerId)
+    .order("updated_at", { ascending: false });
+  return (unwrap(res) ?? []) as CompetitionTheme[];
+}
+
+export async function createCompetitionTheme(
+  ownerId: string,
+  name: string,
+): Promise<CompetitionTheme> {
+  const res = await supabase
+    .from("competition_themes")
+    .insert({ owner_id: ownerId, name: name.trim() })
+    .select("*")
+    .single();
+  return unwrap(res) as CompetitionTheme;
+}
+
+export async function updateCompetitionTheme(
+  themeId: string,
+  patch: Partial<Pick<CompetitionTheme, "name" | "favicon_path" | "background_image_path">>,
+): Promise<void> {
+  const res = await supabase.from("competition_themes").update(patch).eq("id", themeId);
+  if (res.error) throw new Error(res.error.message);
+}
+
+export async function uploadCompetitionThemeAsset(
+  ownerId: string,
+  themeId: string,
+  kind: "favicon" | "background",
+  file: File,
+): Promise<string> {
+  const extension = file.name.includes(".") ? `.${file.name.split(".").pop()}` : "";
+  const path = `${ownerId}/${themeId}/${kind}-${crypto.randomUUID()}${extension}`;
+  const upload = await supabase.storage.from("competition-themes").upload(path, file, {
+    cacheControl: "31536000",
+    contentType: file.type,
+    upsert: false,
+  });
+  if (upload.error) throw new Error(upload.error.message);
+  return path;
+}
+
+export async function applyCompetitionTheme(
+  competitionId: string,
+  themeId: string | null,
+): Promise<void> {
+  const res = await supabase
+    .from("competitions")
+    .update({ theme_id: themeId })
+    .eq("id", competitionId);
+  if (res.error) throw new Error(res.error.message);
+}
+
+export function competitionThemeAssetUrl(path: string | null | undefined): string | null {
+  if (!path) return null;
+  return supabase.storage.from("competition-themes").getPublicUrl(path).data.publicUrl;
+}
+
 /** Subscribe to every table that can change a live scoreboard. */
 export function subscribeToCompetition(competitionId: string, onChange: () => void) {
   const channel = supabase
@@ -86,6 +163,7 @@ export function subscribeToCompetition(competitionId: string, onChange: () => vo
       { event: "*", schema: "public", table: "competitions", filter: `id=eq.${competitionId}` },
       onChange,
     )
+    .on("postgres_changes", { event: "*", schema: "public", table: "competition_themes" }, onChange)
     .subscribe();
 
   return () => {
