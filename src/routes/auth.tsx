@@ -4,7 +4,7 @@ import { toast } from "sonner";
 
 import { Button, Field, Input, Panel } from "@/components/kit";
 import { useSession } from "@/hooks/useSession";
-import { supabase } from "@/lib/supabase";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -35,6 +35,11 @@ function AuthPage() {
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (!isSupabaseConfigured) {
+      toast.error("Supabase is not configured for this deployment.");
+      return;
+    }
+
     setBusy(true);
     try {
       if (mode === "signin") {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 
-import { supabase } from "@/lib/supabase";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 export function useSession() {
   const [session, setSession] = useState<Session | null>(null);
@@ -9,12 +9,28 @@ export function useSession() {
 
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (!mounted) return;
-      setSession(data.session);
+
+    if (!isSupabaseConfigured) {
       setLoading(false);
-    });
+      return () => {
+        mounted = false;
+      };
+    }
+
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (!mounted) return;
+        setSession(data.session);
+        setLoading(false);
+      })
+      .catch((error: unknown) => {
+        if (!mounted) return;
+        console.error("Unable to initialize Supabase session", error);
+        setLoading(false);
+      });
     const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
+      if (!mounted) return;
       setSession(next);
       setLoading(false);
     });
