@@ -1,6 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { toast } from "sonner";
 
 import { Button, Field, Input, Panel } from "@/components/kit";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
@@ -23,11 +22,12 @@ export const Route = createFileRoute("/auth")({
 function AuthPage() {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [busy, setBusy] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!isSupabaseConfigured) {
-      toast.error("Supabase is not configured for this deployment.");
+      setErrorMessage("Supabase is not configured for this deployment.");
       return;
     }
 
@@ -35,6 +35,7 @@ function AuthPage() {
     const email = String(form.get("email") ?? "");
     const password = String(form.get("password") ?? "");
     setBusy(true);
+    setErrorMessage("");
     try {
       if (mode === "signin") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -43,10 +44,10 @@ function AuthPage() {
       } else {
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
-        toast.success("Account created. If confirmation is required, check your inbox.");
+        setErrorMessage("Account created. If confirmation is required, check your inbox.");
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Sign in failed");
+      setErrorMessage(error instanceof Error ? error.message : "Sign in failed");
     } finally {
       setBusy(false);
     }
@@ -96,6 +97,11 @@ function AuthPage() {
             {busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
           </Button>
         </form>
+        {errorMessage ? (
+          <p role="status" className="mt-4 text-sm text-destructive">
+            {errorMessage}
+          </p>
+        ) : null}
         <button
           type="button"
           className="mt-4 text-sm text-muted-foreground underline"
