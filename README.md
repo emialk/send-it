@@ -43,7 +43,8 @@ bun run dev
 ## 4. Publish to GitHub Pages
 
 1. In the repository, go to **Settings → Pages** and set **Source** to **GitHub Actions**.
-2. Go to **Settings → Secrets and variables → Actions → Variables** and add:
+2. Go to **Settings → Secrets and variables → Actions** and add these as
+   **Variables** or **Secrets** (the workflow supports either):
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_PUBLISHABLE_KEY`
 3. Push to `main`. The workflow in `.github/workflows/deploy-pages.yml` builds the static
