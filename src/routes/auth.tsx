@@ -45,7 +45,8 @@ function AuthPage() {
       if (mode === "signin") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        window.location.assign(`${import.meta.env.BASE_URL}admin`);
+        const baseUrl = String(import.meta.env.BASE_URL || "/").replace(/\/?$/, "/");
+        window.location.assign(`${baseUrl}admin`);
       } else {
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
