@@ -13,7 +13,7 @@ export default defineConfig({
   root: path.resolve(import.meta.dirname, "pages"),
   publicDir: path.resolve(import.meta.dirname, "public"),
   base: process.env['VITE_PAGES_BASE'] || "/",
-  plugins: [tsConfigPaths({ projects: ["./tsconfig.json"] }), react(), tailwindcss()],
+  plugins: [react(), tailwindcss()],
   resolve: {
     alias: { "@": path.resolve(import.meta.dirname, "src") },
   },
