@@ -53,10 +53,6 @@ function AuthPage() {
     }
   }
 
-  function isolateInputEvent(event: React.SyntheticEvent<HTMLInputElement>) {
-    event.stopPropagation();
-  }
-
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-10">
       <Link to="/" className="text-xs font-bold uppercase tracking-[0.3em] text-primary">
@@ -69,20 +65,22 @@ function AuthPage() {
         <form onSubmit={submit} className="space-y-4">
           <Field label="Email">
             <Input
-              type="email"
+              type="text"
               name="email"
-              autoComplete="email"
+              inputMode="email"
+              autoComplete="off"
+              spellCheck={false}
+              autoCorrect="off"
+              autoCapitalize="none"
               required
-              onBeforeInputCapture={isolateInputEvent}
-              onKeyDownCapture={isolateInputEvent}
-              onInputCapture={isolateInputEvent}
             />
           </Field>
           <Field label="Password">
             <Input
               type="password"
               name="password"
-              autoComplete={mode === "signin" ? "current-password" : "new-password"}
+              autoComplete="off"
+              spellCheck={false}
               required
               minLength={6}
               onBeforeInputCapture={isolateInputEvent}
