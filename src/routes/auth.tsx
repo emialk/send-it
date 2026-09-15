@@ -23,8 +23,6 @@ export const Route = createFileRoute("/auth")({
 function AuthPage() {
   const navigate = useNavigate();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function submit(event: React.FormEvent) {
@@ -34,6 +32,9 @@ function AuthPage() {
       return;
     }
 
+    const form = new FormData(event.currentTarget);
+    const email = String(form.get("email") ?? "");
+    const password = String(form.get("password") ?? "");
     setBusy(true);
     try {
       if (mode === "signin") {
@@ -65,20 +66,18 @@ function AuthPage() {
           <Field label="Email">
             <Input
               type="email"
+              name="email"
               autoComplete="email"
               required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
             />
           </Field>
           <Field label="Password">
             <Input
               type="password"
+              name="password"
               autoComplete={mode === "signin" ? "current-password" : "new-password"}
               required
               minLength={6}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
             />
           </Field>
           <Button type="submit" size="lg" className="w-full" disabled={busy}>
