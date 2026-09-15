@@ -1,18 +1,20 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 const url = import.meta.env['VITE_SUPABASE_URL'] as string | undefined;
-const anonKey = import.meta.env['VITE_SUPABASE_ANON_KEY'] as string | undefined;
+/** Supabase publishable key (sb_publishable_…). Safe to ship in the browser bundle. */
+const publishableKey = (import.meta.env['VITE_SUPABASE_PUBLISHABLE_KEY'] ??
+  import.meta.env['VITE_SUPABASE_ANON_KEY']) as string | undefined;
 
-export const isSupabaseConfigured = Boolean(url && anonKey);
+export const isSupabaseConfigured = Boolean(url && publishableKey);
 
 /**
- * Browser-only Supabase client. Uses the public anon key: all access control is
- * enforced by Row Level Security and the security-definer competitor RPCs.
- * No service-role key ever reaches this bundle.
+ * Browser-only Supabase client. Uses the public publishable key: all access
+ * control is enforced by Row Level Security and the security-definer competitor
+ * RPCs. No secret key ever reaches this bundle.
  */
 export const supabase: SupabaseClient = createClient(
   url ?? "https://placeholder.supabase.co",
-  anonKey ?? "public-anon-key-missing",
+  publishableKey ?? "sb_publishable_missing",
   {
     auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
     realtime: { params: { eventsPerSecond: 10 } },

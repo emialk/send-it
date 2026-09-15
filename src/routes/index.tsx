@@ -61,8 +61,8 @@ function Landing() {
         <Panel className="mt-10 border-destructive/50">
           <h2 className="font-display text-2xl">Finish the setup</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Add your database address and public key as <code>VITE_SUPABASE_URL</code> and{" "}
-            <code>VITE_SUPABASE_ANON_KEY</code>, then reload this page.
+            Add your database address and publishable key as <code>VITE_SUPABASE_URL</code> and{" "}
+            <code>VITE_SUPABASE_PUBLISHABLE_KEY</code>, then reload this page.
           </p>
         </Panel>
       ) : null}

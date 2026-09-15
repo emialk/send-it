@@ -9,7 +9,8 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "build:pages": "vite build --config vite.pages.config.ts && cp dist-pages/index.html dist-pages/404.html"
   },
   "overrides": {
     "rolldown": "1.2.1"
