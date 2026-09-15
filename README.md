@@ -1,29 +1,77 @@
-# Welcome to your Lovable project
+# Send — Climbing Competition Scoring
 
-This project was built with [Lovable](https://lovable.dev).
+Live scoring for bouldering, lead and top-rope competitions.
 
-## Build with Lovable
+- **Organisers** sign in, set up categories, routes and climbers, and control the competition.
+- **Climbers** open a personal QR link on their phone and record their own climbs — no account.
+- **Everyone** can follow a full-screen scoreboard that updates in real time.
 
-Open your project in the [Lovable editor](https://lovable.dev) and keep building.
+The app is a static site (React + TypeScript + Vite + Tailwind) that talks directly to
+Supabase (PostgreSQL, Auth, Row Level Security, Realtime). There is no server of our own.
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: connect the project to GitHub and every change made in Lovable is committed straight to your repository.
-- **Full ownership**: this code is yours. Push to your repository and your changes sync back into Lovable, ready for your next prompt.
+## 1. Set up the database
 
-## Development
+In your Supabase project, open **SQL Editor** and run the contents of:
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
-
-```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
+```
+supabase/migrations/20260913090000_init_climbing_comp.sql
 ```
 
-## Built with
+This creates all tables, access rules, the secure competitor link functions and enables
+realtime. Nothing else needs configuring — but make sure **Email** sign-in is enabled under
+Authentication → Providers so organisers can create accounts.
 
-- TanStack Start
-- TypeScript
-- React
-- Tailwind CSS
+## 2. Configure the keys
+
+Copy `.env.example` to `.env` and fill in your project values:
+
+```
+VITE_SUPABASE_URL=https://<project-id>.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+```
+
+Only the publishable key is ever used in the browser. Never put a secret or service-role
+key in this project.
+
+## 3. Run locally
+
+```sh
+bun install
+bun run dev
+```
+
+## 4. Publish to GitHub Pages
+
+1. In the repository, go to **Settings → Pages** and set **Source** to **GitHub Actions**.
+2. Go to **Settings → Secrets and variables → Actions → Variables** and add:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_PUBLISHABLE_KEY`
+3. Push to `main`. The workflow in `.github/workflows/deploy-pages.yml` builds the static
+   site and publishes it to `https://<owner>.github.io/<repo>/`.
+
+To build the static site yourself:
+
+```sh
+VITE_PAGES_BASE=/Send/ bun run build:pages   # output in dist-pages/
+```
+
+`404.html` is generated alongside `index.html` so deep links (climber links, scoreboards)
+work on GitHub Pages.
+
+## Pages
+
+| Path                        | Who        | What                                       |
+| --------------------------- | ---------- | ------------------------------------------ |
+| `/`                         | Everyone   | Landing page and public scoreboard list    |
+| `/auth`                     | Organisers | Sign in / create account                   |
+| `/admin`                    | Organisers | Competitions dashboard                     |
+| `/admin/:id`                | Organisers | Full competition setup, scoring and export |
+| `/climb/:token`             | Climbers   | Personal phone scoring card (QR link)      |
+| `/scoreboard/:id`           | Everyone   | Full-screen live scoreboard                |
+
+## Security
+
+- Organisers can only read and change their own competitions.
+- Climber links use a 48-character random token, validated inside the database; a climber
+  can only ever see and score their own card in their own competition.
+- Climber tokens are never exposed to the public scoreboard or exports.
