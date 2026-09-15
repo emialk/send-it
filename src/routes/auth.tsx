@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -21,7 +21,6 @@ export const Route = createFileRoute("/auth")({
 });
 
 function AuthPage() {
-  const navigate = useNavigate();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [busy, setBusy] = useState(false);
 
@@ -40,7 +39,7 @@ function AuthPage() {
       if (mode === "signin") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        await navigate({ to: "/admin", replace: true });
+        window.location.assign(`${import.meta.env.BASE_URL}admin`);
       } else {
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
@@ -51,6 +50,10 @@ function AuthPage() {
     } finally {
       setBusy(false);
     }
+  }
+
+  function isolateFocusEvent(event: React.SyntheticEvent<HTMLInputElement>) {
+    event.stopPropagation();
   }
 
   return (
@@ -73,6 +76,8 @@ function AuthPage() {
               autoCorrect="off"
               autoCapitalize="none"
               required
+              onFocusCapture={isolateFocusEvent}
+              onBlurCapture={isolateFocusEvent}
             />
           </Field>
           <Field label="Password">
@@ -83,6 +88,8 @@ function AuthPage() {
               spellCheck={false}
               required
               minLength={6}
+              onFocusCapture={isolateFocusEvent}
+              onBlurCapture={isolateFocusEvent}
             />
           </Field>
           <Button type="submit" size="lg" className="w-full" disabled={busy}>
