@@ -1,5 +1,5 @@
 import { cva, type VariantProps } from "class-variance-authority";
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
+import { useEffect, useRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from "react";
 
 import { cn } from "@/lib/utils";
 import type { CompetitionStatus } from "@/lib/db-types";
@@ -64,8 +64,47 @@ export function Field({
 const controlClass =
   "w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground";
 
-export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
-  return <input className={cn(controlClass, className)} {...props} />;
+export function Input({
+  className,
+  name,
+  defaultValue,
+  value,
+  type = "text",
+  placeholder,
+  disabled,
+  required,
+  ...props
+}: InputHTMLAttributes<HTMLInputElement>) {
+  const editorRef = useRef<HTMLDivElement>(null);
+  const valueRef = useRef<HTMLInputElement>(null);
+  const initialValue = String(value ?? defaultValue ?? "");
+
+  useEffect(() => {
+    if (valueRef.current) valueRef.current.value = initialValue;
+  }, [initialValue]);
+
+  return (
+    <>
+      <div
+        ref={editorRef}
+        contentEditable={!disabled}
+        role="textbox"
+        aria-disabled={disabled}
+        aria-required={required}
+        data-placeholder={placeholder}
+        tabIndex={disabled ? -1 : 0}
+        className={cn(controlClass, "min-h-10", className)}
+        onInput={() => {
+          if (valueRef.current) valueRef.current.value = editorRef.current?.textContent ?? "";
+        }}
+        style={type === "password" ? { WebkitTextSecurity: "disc" } : undefined}
+        suppressContentEditableWarning
+      >
+        {initialValue}
+      </div>
+      <input ref={valueRef} type="hidden" name={name} disabled={disabled} {...props} />
+    </>
+  );
 }
 
 export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
