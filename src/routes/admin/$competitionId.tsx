@@ -450,8 +450,8 @@ function CompetitionAdmin() {
                   setBackgroundFile(null);
                 }}
               >
-                <option value="default">Default: No images</option>
-                <option value="lkk">LKK: Using the images in public/lkk</option>
+                <option value="default">Default</option>
+                <option value="lkk">LKK</option>
                 {themeList.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.name}
@@ -516,9 +516,15 @@ function CompetitionAdmin() {
                 </>
               ) : null}
               <div className="flex flex-wrap gap-2 sm:col-span-2">
-                <Button type="button" onClick={applySelectedTheme}>
-                  Apply theme
-                </Button>
+                {selectedThemeId === "new" ? (
+                  <Button type="button" variant="secondary" onClick={() => void saveTheme(false)}>
+                    Save theme
+                  </Button>
+                ) : (
+                  <Button type="button" onClick={applySelectedTheme}>
+                    Apply theme
+                  </Button>
+                )}
                 {themeIsCustom ? (
                   <Button
                     type="button"
@@ -526,10 +532,6 @@ function CompetitionAdmin() {
                     onClick={() => void deleteTheme()}
                   >
                     Delete theme
-                  </Button>
-                ) : (
-                  <Button type="button" variant="secondary" onClick={() => void saveTheme(false)}>
-                    Save theme
                   </Button>
                 )}
               </div>
@@ -539,7 +541,9 @@ function CompetitionAdmin() {
                 Currently applied: {theme.name}
               </p>
             ) : (
-              <p className="mt-2 text-xs text-muted-foreground">Currently applied: LKK (default)</p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Currently applied: {competition.theme_preset === "lkk" ? "LKK" : "Default"}
+              </p>
             )}
           </Panel>
 
