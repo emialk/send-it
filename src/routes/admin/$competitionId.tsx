@@ -209,14 +209,14 @@ function CompetitionAdmin() {
       if (Object.keys(assetPatch).length > 0) {
         await updateCompetitionTheme(saved.id, assetPatch);
       }
-      if (apply) {
+      if (apply || selectedThemeId === "new") {
         await applyCompetitionTheme(competitionId, saved.id);
       }
       setFaviconFile(null);
       setBackgroundFile(null);
       await queryClient.invalidateQueries({ queryKey: ["competition-themes", session!.user.id] });
       refresh();
-      toast.success(apply ? "Theme applied" : "Theme saved");
+      toast.success(apply || selectedThemeId === "new" ? "Theme saved and applied" : "Theme saved");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not save theme");
     }

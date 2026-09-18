@@ -145,8 +145,13 @@ export async function applyCompetitionTheme(
   const res = await supabase
     .from("competitions")
     .update({ theme_id: themeId, theme_preset: preset })
-    .eq("id", competitionId);
+    .eq("id", competitionId)
+    .select("id, theme_id, theme_preset")
+    .single();
   if (res.error) throw new Error(res.error.message);
+  if (res.data.theme_id !== themeId || res.data.theme_preset !== preset) {
+    throw new Error("The competition theme was not updated");
+  }
 }
 
 export function competitionThemeAssetUrl(path: string | null | undefined): string | null {
