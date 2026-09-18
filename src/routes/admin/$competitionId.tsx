@@ -89,7 +89,7 @@ function CompetitionAdmin() {
   const { session, loading } = useSession();
   const [tab, setTab] = useState<Tab>("setup");
   const [qrFor, setQrFor] = useState<Competitor | null>(null);
-  const [selectedThemeId, setSelectedThemeId] = useState("");
+  const [selectedThemeId, setSelectedThemeId] = useState("default");
   const [faviconFile, setFaviconFile] = useState<File | null>(null);
   const [backgroundFile, setBackgroundFile] = useState<File | null>(null);
 
@@ -118,7 +118,9 @@ function CompetitionAdmin() {
 
   const now = useServerClock(null);
   useEffect(() => {
-    setSelectedThemeId(bundle.data?.competition.theme_id ?? "");
+    setSelectedThemeId(
+      bundle.data?.competition.theme_id ?? bundle.data?.competition.theme_preset ?? "default",
+    );
   }, [bundle.data?.competition.theme_id]);
 
   if (bundle.isLoading) return <main className="p-6 text-muted-foreground">Loading…</main>;
@@ -175,7 +177,7 @@ function CompetitionAdmin() {
 
     try {
       let saved: CompetitionTheme;
-      if (selectedThemeId) {
+      if (selectedThemeId !== "new") {
         if (!selectedTheme) throw new Error("Theme is no longer available");
         saved = { ...selectedTheme, name };
         await updateCompetitionTheme(selectedThemeId, { name });
@@ -225,7 +227,7 @@ function CompetitionAdmin() {
     if (!window.confirm(`Delete the theme “${selectedTheme.name}”?`)) return;
     await run(async () => {
       await deleteCompetitionTheme(selectedTheme.id);
-      setSelectedThemeId("");
+      setSelectedThemeId("default");
       setFaviconFile(null);
       setBackgroundFile(null);
       await queryClient.invalidateQueries({ queryKey: ["competition-themes", session!.user.id] });
@@ -233,15 +235,19 @@ function CompetitionAdmin() {
   };
 
   const applySelectedTheme = () => {
-    if (!selectedThemeId) {
-      void run(
-        () => applyCompetitionTheme(competitionId, null),
-        "LKK default applied",
-      );
+    if (selectedThemeId === "default") {
+      void run(() => applyCompetitionTheme(competitionId, null, "default"), "Default theme applied");
       return;
     }
+    if (selectedThemeId === "lkk") {
+      void run(() => applyCompetitionTheme(competitionId, null, "lkk"), "LKK theme applied");
+      return;
+    }
+    if (selectedThemeId === "new") return;
     void saveTheme(true);
   };
+
+  const themeIsCustom = selectedThemeId !== "default" && selectedThemeId !== "lkk" && selectedThemeId !== "new";
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-6">
@@ -431,8 +437,8 @@ function CompetitionAdmin() {
               and climber links can load them without sign-in.
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
-              The built-in <strong className="text-foreground">LKK</strong> theme is used when no
-              custom theme is applied.
+              Choose a built-in preset, apply a saved theme, or create reusable branding for this
+              competition.
             </p>
             <Field label="Reusable theme">
               <Select
@@ -444,12 +450,14 @@ function CompetitionAdmin() {
                   setBackgroundFile(null);
                 }}
               >
-                <option value="">Create a new theme / use LKK default</option>
+                <option value="default">Default: No images</option>
+                <option value="lkk">LKK: Using the images in public/lkk</option>
                 {themeList.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.name}
                   </option>
                 ))}
+                <option value="new">Create new theme</option>
               </Select>
             </Field>
             <form
@@ -458,52 +466,60 @@ function CompetitionAdmin() {
               className="mt-3 grid gap-3 sm:grid-cols-2"
               onSubmit={(event) => event.preventDefault()}
             >
-              <Field label="Theme name">
-                <Input
-                  name="themeName"
-                  defaultValue={selectedTheme?.name ?? ""}
-                  placeholder="Summer series"
-                  required
-                />
-              </Field>
-              <Field label="Favicon" hint="PNG, SVG, ICO or another browser-supported image">
-                <Input
-                  name="favicon"
-                  type="file"
-                  accept="image/*,.ico"
-                  onChange={(event) => setFaviconFile(event.target.files?.[0] ?? null)}
-                />
-                {selectedTheme?.favicon_path ? (
-                  <img
-                    src={competitionThemeAssetUrl(selectedTheme.favicon_path) ?? undefined}
-                    alt="Current favicon"
-                    className="mt-2 h-8 w-8 rounded object-cover"
-                  />
-                ) : null}
-              </Field>
-              <Field
-                label="Background image"
-                hint="A dark overlay is added automatically for contrast"
-              >
-                <Input
-                  name="background"
-                  type="file"
-                  accept="image/*"
-                  onChange={(event) => setBackgroundFile(event.target.files?.[0] ?? null)}
-                />
-                {selectedTheme?.background_image_path ? (
-                  <img
-                    src={competitionThemeAssetUrl(selectedTheme.background_image_path) ?? undefined}
-                    alt="Current background"
-                    className="mt-2 h-20 w-full rounded object-cover"
-                  />
-                ) : null}
-              </Field>
+              {selectedThemeId === "new" || themeIsCustom ? (
+                <>
+                  <Field label="Theme name">
+                    <Input
+                      name="themeName"
+                      defaultValue={selectedTheme?.name ?? ""}
+                      placeholder="Summer series"
+                      required={selectedThemeId === "new"}
+                    />
+                  </Field>
+                </>
+              ) : null}
+              {selectedThemeId === "new" || themeIsCustom ? (
+                <>
+                  <Field label="Favicon" hint="PNG, SVG, ICO or another browser-supported image">
+                    <Input
+                      name="favicon"
+                      type="file"
+                      accept="image/*,.ico"
+                      onChange={(event) => setFaviconFile(event.target.files?.[0] ?? null)}
+                    />
+                    {selectedTheme?.favicon_path ? (
+                      <img
+                        src={competitionThemeAssetUrl(selectedTheme.favicon_path) ?? undefined}
+                        alt="Current favicon"
+                        className="mt-2 h-8 w-8 rounded object-cover"
+                      />
+                    ) : null}
+                  </Field>
+                  <Field
+                    label="Background image"
+                    hint="A dark overlay is added automatically for contrast"
+                  >
+                    <Input
+                      name="background"
+                      type="file"
+                      accept="image/*"
+                      onChange={(event) => setBackgroundFile(event.target.files?.[0] ?? null)}
+                    />
+                    {selectedTheme?.background_image_path ? (
+                      <img
+                        src={competitionThemeAssetUrl(selectedTheme.background_image_path) ?? undefined}
+                        alt="Current background"
+                        className="mt-2 h-20 w-full rounded object-cover"
+                      />
+                    ) : null}
+                  </Field>
+                </>
+              ) : null}
               <div className="flex flex-wrap gap-2 sm:col-span-2">
                 <Button type="button" onClick={applySelectedTheme}>
                   Apply theme
                 </Button>
-                {selectedThemeId ? (
+                {themeIsCustom ? (
                   <Button
                     type="button"
                     variant="danger"

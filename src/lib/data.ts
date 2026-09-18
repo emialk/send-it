@@ -8,6 +8,7 @@ import type {
   CompetitorContext,
   RouteResult,
 } from "./db-types";
+import { LKK_COMPETITION_THEME } from "./db-types";
 
 export interface CompetitionBundle {
   competition: Competition;
@@ -50,7 +51,10 @@ export async function fetchCompetitionBundle(competitionId: string): Promise<Com
           .select("id, name, favicon_path, background_image_path, created_at, updated_at")
           .eq("id", competitionRow.theme_id)
           .maybeSingle()
-      : Promise.resolve({ data: null, error: null }),
+      : Promise.resolve({
+          data: competitionRow.theme_preset === "lkk" ? LKK_COMPETITION_THEME : null,
+          error: null,
+        }),
   ]);
 
   return {
@@ -136,10 +140,11 @@ export async function uploadCompetitionThemeAsset(
 export async function applyCompetitionTheme(
   competitionId: string,
   themeId: string | null,
+  preset: "default" | "lkk" = "default",
 ): Promise<void> {
   const res = await supabase
     .from("competitions")
-    .update({ theme_id: themeId })
+    .update({ theme_id: themeId, theme_preset: preset })
     .eq("id", competitionId);
   if (res.error) throw new Error(res.error.message);
 }

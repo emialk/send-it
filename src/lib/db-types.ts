@@ -3,6 +3,7 @@
 
 export type CompetitionStatus = "draft" | "registration" | "active" | "finished" | "archived";
 export type Discipline = "bouldering" | "lead" | "top_rope";
+export type CompetitionThemePreset = "default" | "lkk";
 
 export interface BoulderScoringConfig {
   topPoints: number;
@@ -51,6 +52,7 @@ export interface Competition {
   scoring_config: ScoringConfig;
   show_ranking_to_competitors: boolean;
   theme_id: string | null;
+  theme_preset: CompetitionThemePreset;
   created_at: string;
   updated_at: string;
 }
@@ -64,6 +66,15 @@ export interface CompetitionTheme {
   created_at: string;
   updated_at: string;
 }
+
+export const LKK_COMPETITION_THEME: CompetitionTheme = {
+  id: "builtin-lkk",
+  name: "LKK",
+  favicon_path: "/lkk/favicon.ico",
+  background_image_path: "/lkk/lkk_logo.svg",
+  created_at: "",
+  updated_at: "",
+};
 
 export interface Category {
   id: string;

@@ -3,15 +3,6 @@ import { useEffect } from "react";
 import { competitionThemeAssetUrl } from "@/lib/data";
 import type { CompetitionTheme } from "@/lib/db-types";
 
-export const DEFAULT_COMPETITION_THEME: CompetitionTheme = {
-  id: "builtin-lkk",
-  name: "LKK",
-  favicon_path: "/lkk/favicon.ico",
-  background_image_path: "/lkk/lkk_logo.svg",
-  created_at: "",
-  updated_at: "",
-};
-
 /**
  * Applies organiser branding to the document without changing the global
  * fallback design tokens used by admin and unbranded pages.

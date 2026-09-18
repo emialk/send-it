@@ -6,7 +6,7 @@ import { toast } from "sonner";
 
 import { Button, Panel, StatusPill } from "@/components/kit";
 import { CompetitionTimer, useServerClock } from "@/components/CompetitionClock";
-import { DEFAULT_COMPETITION_THEME, useCompetitionTheme } from "@/components/CompetitionTheme";
+import { useCompetitionTheme } from "@/components/CompetitionTheme";
 import { fetchCompetitorContext, saveCompetitorResult } from "@/lib/data";
 import type { ClimbingRoute, RouteResult } from "@/lib/db-types";
 import { scoreCompetitor, scoreResult } from "@/lib/scoring";
@@ -49,7 +49,7 @@ function CompetitorScoring() {
   });
 
   const now = useServerClock(context.data?.server_time ?? null);
-  useCompetitionTheme(context.data?.theme ?? DEFAULT_COMPETITION_THEME);
+  useCompetitionTheme(context.data?.theme);
 
   if (context.isLoading) {
     return <main className="p-6 text-muted-foreground">Loading your card…</main>;
