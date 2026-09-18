@@ -1,5 +1,12 @@
 import { cva, type VariantProps } from "class-variance-authority";
-import { useEffect, useRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from "react";
+import {
+  useEffect,
+  useRef,
+  type ButtonHTMLAttributes,
+  type InputHTMLAttributes,
+  type ReactNode,
+  type SelectHTMLAttributes,
+} from "react";
 
 import { cn } from "@/lib/utils";
 import type { CompetitionStatus } from "@/lib/db-types";
@@ -75,13 +82,68 @@ export function Input({
   required,
   ...props
 }: InputHTMLAttributes<HTMLInputElement>) {
+  if (type === "date") {
+    return (
+      <input
+        className={cn(controlClass, className)}
+        name={name}
+        {...props}
+        type={type}
+        defaultValue={defaultValue}
+        value={value}
+        disabled={disabled}
+        required={required}
+      />
+    );
+  }
+
+  return (
+    <EditableInput
+      className={className}
+      name={name}
+      defaultValue={defaultValue}
+      value={value}
+      type={type}
+      placeholder={placeholder}
+      disabled={disabled}
+      required={required}
+      {...props}
+    />
+  );
+}
+
+function EditableInput({
+  className,
+  name,
+  defaultValue,
+  value,
+  type,
+  placeholder,
+  disabled,
+  required,
+}: InputHTMLAttributes<HTMLInputElement>) {
   const editorRef = useRef<HTMLDivElement>(null);
   const valueRef = useRef<HTMLInputElement>(null);
   const initialValue = String(value ?? defaultValue ?? "");
+  const inputMode = type === "number" ? "decimal" : type === "email" ? "email" : "text";
 
   useEffect(() => {
     if (valueRef.current) valueRef.current.value = initialValue;
   }, [initialValue]);
+
+  function handleKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    event.currentTarget.closest("form")?.requestSubmit();
+  }
+
+  function handleInput() {
+    const text = editorRef.current?.textContent ?? "";
+    if (valueRef.current) {
+      valueRef.current.value =
+        type === "number" && text.trim() !== "" && !Number.isFinite(Number(text)) ? "" : text;
+    }
+  }
 
   return (
     <>
@@ -93,10 +155,10 @@ export function Input({
         aria-required={required}
         data-placeholder={placeholder}
         tabIndex={disabled ? -1 : 0}
+        inputMode={inputMode}
         className={cn(controlClass, "min-h-10", className)}
-        onInput={() => {
-          if (valueRef.current) valueRef.current.value = editorRef.current?.textContent ?? "";
-        }}
+        onKeyDown={handleKeyDown}
+        onInput={handleInput}
         style={type === "password" ? { WebkitTextSecurity: "disc" } : undefined}
         suppressContentEditableWarning
       >

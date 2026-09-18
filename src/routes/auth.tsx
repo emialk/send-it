@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useState } from "react";
 
-import { Button, Field, Panel } from "@/components/kit";
+import { Button, Field, Input, Panel } from "@/components/kit";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/auth")({
@@ -23,9 +23,6 @@ function AuthPage() {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [busy, setBusy] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const emailValue = useRef<HTMLInputElement>(null);
-  const passwordValue = useRef<HTMLInputElement>(null);
-
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!isSupabaseConfigured) {
@@ -33,8 +30,9 @@ function AuthPage() {
       return;
     }
 
-    const email = emailValue.current?.value ?? "";
-    const password = passwordValue.current?.value ?? "";
+    const form = new FormData(event.currentTarget);
+    const email = String(form.get("email") ?? "");
+    const password = String(form.get("password") ?? "");
     if (!email || !password) {
       setErrorMessage("Email and password are required.");
       return;
@@ -59,13 +57,6 @@ function AuthPage() {
     }
   }
 
-  function updateValue(
-    event: React.FormEvent<HTMLDivElement>,
-    value: React.RefObject<HTMLInputElement | null>,
-  ) {
-    if (value.current) value.current.value = event.currentTarget.textContent ?? "";
-  }
-
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-10">
       <Link to="/" className="text-xs font-bold uppercase tracking-[0.3em] text-primary">
@@ -77,29 +68,10 @@ function AuthPage() {
       <Panel className="mt-6">
         <form onSubmit={submit} className="space-y-4">
           <Field label="Email">
-            <div
-              contentEditable
-              role="textbox"
-              aria-label="Email"
-              tabIndex={0}
-              spellCheck={false}
-              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none"
-              onInput={(event) => updateValue(event, emailValue)}
-            />
-            <input ref={emailValue} type="hidden" name="email" />
+            <Input type="text" name="email" inputMode="email" required />
           </Field>
           <Field label="Password">
-            <div
-              contentEditable
-              role="textbox"
-              aria-label="Password"
-              tabIndex={0}
-              spellCheck={false}
-              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none"
-              style={{ WebkitTextSecurity: "disc" } as React.CSSProperties}
-              onInput={(event) => updateValue(event, passwordValue)}
-            />
-            <input ref={passwordValue} type="hidden" name="password" />
+            <Input type="password" name="password" required minLength={6} />
           </Field>
           <Button type="submit" size="lg" className="w-full" disabled={busy}>
             {busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
