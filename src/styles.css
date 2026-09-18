@@ -142,3 +142,9 @@
 @utility tabular {
   font-variant-numeric: tabular-nums;
 }
+
+html[data-competition-theme="custom"] .panel {
+  background-color: color-mix(in srgb, var(--color-surface) 78%, transparent);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}

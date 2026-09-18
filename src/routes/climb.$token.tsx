@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { Button, Panel, StatusPill } from "@/components/kit";
 import { CompetitionTimer, useServerClock } from "@/components/CompetitionClock";
+import { useCompetitionTheme } from "@/components/CompetitionTheme";
 import { fetchCompetitorContext, saveCompetitorResult } from "@/lib/data";
 import type { ClimbingRoute, RouteResult } from "@/lib/db-types";
 import { scoreCompetitor, scoreResult } from "@/lib/scoring";
@@ -48,6 +49,7 @@ function CompetitorScoring() {
   });
 
   const now = useServerClock(context.data?.server_time ?? null);
+  useCompetitionTheme(context.data?.theme);
 
   if (context.isLoading) {
     return <main className="p-6 text-muted-foreground">Loading your card…</main>;
@@ -63,13 +65,16 @@ function CompetitorScoring() {
     );
   }
 
-  const { competitor, category, competition, routes, results } = context.data;
+  const { competitor, category, competition, routes, results, theme } = context.data;
   const byRoute = new Map(results.map((r) => [r.route_id, r]));
   const summary = scoreCompetitor(competition, routes, results);
   const locked = competition.status !== "active";
 
   return (
-    <main className="mx-auto max-w-xl px-4 pb-24 pt-6">
+    <main
+      className="mx-auto max-w-xl px-4 pb-24 pt-6"
+      data-theme={theme ? "custom" : "default"}
+    >
       <header>
         <p className="text-xs font-bold uppercase tracking-[0.3em] text-primary">
           {competition.name}

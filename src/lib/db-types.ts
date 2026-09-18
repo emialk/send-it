@@ -50,6 +50,17 @@ export interface Competition {
   scoring_format: string;
   scoring_config: ScoringConfig;
   show_ranking_to_competitors: boolean;
+  theme_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CompetitionTheme {
+  id: string;
+  owner_id?: string;
+  name: string;
+  favicon_path: string | null;
+  background_image_path: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -111,6 +122,7 @@ export interface CompetitorContext {
   };
   category: { id: string; name: string } | null;
   competition: Competition;
+  theme: CompetitionTheme | null;
   routes: ClimbingRoute[];
   results: RouteResult[];
 }
