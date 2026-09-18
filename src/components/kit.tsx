@@ -121,6 +121,7 @@ function EditableInput({
   placeholder,
   disabled,
   required,
+  ...props
 }: InputHTMLAttributes<HTMLInputElement>) {
   const editorRef = useRef<HTMLDivElement>(null);
   const valueRef = useRef<HTMLInputElement>(null);
