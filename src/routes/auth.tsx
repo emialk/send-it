@@ -1,9 +1,7 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 
 import { Button, Field, Input, Panel } from "@/components/kit";
-import { useSession } from "@/hooks/useSession";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/auth")({
@@ -22,36 +20,38 @@ export const Route = createFileRoute("/auth")({
 });
 
 function AuthPage() {
-  const navigate = useNavigate();
-  const { session, loading } = useSession();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    if (!loading && session) void navigate({ to: "/admin", replace: true });
-  }, [loading, session, navigate]);
-
+  const [errorMessage, setErrorMessage] = useState("");
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!isSupabaseConfigured) {
-      toast.error("Supabase is not configured for this deployment.");
+      setErrorMessage("Supabase is not configured for this deployment.");
       return;
     }
 
+    const form = new FormData(event.currentTarget);
+    const email = String(form.get("email") ?? "");
+    const password = String(form.get("password") ?? "");
+    if (!email || !password) {
+      setErrorMessage("Email and password are required.");
+      return;
+    }
     setBusy(true);
+    setErrorMessage("");
     try {
       if (mode === "signin") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        const baseUrl = String(import.meta.env.BASE_URL || "/").replace(/\/?$/, "/");
+        window.location.assign(`${baseUrl}admin`);
       } else {
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
-        toast.success("Account created. If confirmation is required, check your inbox.");
+        setErrorMessage("Account created. If confirmation is required, check your inbox.");
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Sign in failed");
+      setErrorMessage(error instanceof Error ? error.message : "Sign in failed");
     } finally {
       setBusy(false);
     }
@@ -68,28 +68,20 @@ function AuthPage() {
       <Panel className="mt-6">
         <form onSubmit={submit} className="space-y-4">
           <Field label="Email">
-            <Input
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
+            <Input type="text" name="email" inputMode="email" required />
           </Field>
           <Field label="Password">
-            <Input
-              type="password"
-              autoComplete={mode === "signin" ? "current-password" : "new-password"}
-              required
-              minLength={6}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            <Input type="password" name="password" required minLength={6} />
           </Field>
           <Button type="submit" size="lg" className="w-full" disabled={busy}>
             {busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
           </Button>
         </form>
+        {errorMessage ? (
+          <p role="status" className="mt-4 text-sm text-destructive">
+            {errorMessage}
+          </p>
+        ) : null}
         <button
           type="button"
           className="mt-4 text-sm text-muted-foreground underline"
