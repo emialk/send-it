@@ -244,7 +244,10 @@ function CompetitionAdmin() {
       return;
     }
     if (selectedThemeId === "new") return;
-    void saveTheme(true);
+    void run(
+      () => applyCompetitionTheme(competitionId, selectedThemeId, "default"),
+      "Theme applied",
+    );
   };
 
   const themeIsCustom = selectedThemeId !== "default" && selectedThemeId !== "lkk" && selectedThemeId !== "new";
