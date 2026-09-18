@@ -533,7 +533,7 @@ function CompetitionAdmin() {
                   >
                     Delete theme
                   </Button>
-                )}
+                ) : null}
               </div>
             </form>
             {theme ? (
