@@ -27,6 +27,7 @@ import {
   deleteCategory,
   deleteCompetition,
   deleteCompetitor,
+  deleteCompetitionTheme,
   deleteRoute,
   fetchCompetitionBundle,
   listMyThemes,
@@ -65,6 +66,21 @@ export const Route = createFileRoute("/admin/$competitionId")({
 });
 
 type Tab = "setup" | "routes" | "climbers" | "standings";
+
+const statusLabels: Record<CompetitionStatus, string> = {
+  draft: "Draft",
+  registration: "Registration",
+  active: "Active",
+  finished: "Finished",
+  archived: "Archived",
+};
+
+const tabLabels: Record<Tab, string> = {
+  setup: "Setup",
+  routes: "Routes",
+  climbers: "Climbers",
+  standings: "Standings",
+};
 
 function CompetitionAdmin() {
   const { competitionId } = Route.useParams();
@@ -131,7 +147,7 @@ function CompetitionAdmin() {
     try {
       await updateCompetition(competitionId, patch);
       refresh();
-      toast.success(`Status: ${status}`);
+      toast.success(`Status: ${statusLabels[status]}`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not update");
     }
@@ -145,6 +161,86 @@ function CompetitionAdmin() {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Something went wrong");
     }
+  };
+
+  const saveTheme = async (apply: boolean) => {
+    const form = document.getElementById("competition-theme-form");
+    if (!(form instanceof HTMLFormElement)) return;
+    const formData = new FormData(form);
+    const name = String(formData.get("themeName") ?? "").trim();
+    if (!name) {
+      toast.error("Give the theme a name");
+      return;
+    }
+
+    try {
+      let saved: CompetitionTheme;
+      if (selectedThemeId) {
+        if (!selectedTheme) throw new Error("Theme is no longer available");
+        saved = { ...selectedTheme, name };
+        await updateCompetitionTheme(selectedThemeId, { name });
+      } else {
+        saved = await createCompetitionTheme(session!.user.id, name);
+        setSelectedThemeId(saved.id);
+      }
+
+      const assetPatch: {
+        favicon_path?: string;
+        background_image_path?: string;
+      } = {};
+      if (faviconFile) {
+        assetPatch.favicon_path = await uploadCompetitionThemeAsset(
+          session!.user.id,
+          saved.id,
+          "favicon",
+          faviconFile,
+        );
+      }
+      if (backgroundFile) {
+        assetPatch.background_image_path = await uploadCompetitionThemeAsset(
+          session!.user.id,
+          saved.id,
+          "background",
+          backgroundFile,
+        );
+      }
+      if (Object.keys(assetPatch).length > 0) {
+        await updateCompetitionTheme(saved.id, assetPatch);
+      }
+      if (apply) {
+        await applyCompetitionTheme(competitionId, saved.id);
+      }
+      setFaviconFile(null);
+      setBackgroundFile(null);
+      await queryClient.invalidateQueries({ queryKey: ["competition-themes", session!.user.id] });
+      refresh();
+      toast.success(apply ? "Theme applied" : "Theme saved");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not save theme");
+    }
+  };
+
+  const deleteTheme = async () => {
+    if (!selectedThemeId || !selectedTheme) return;
+    if (!window.confirm(`Delete the theme “${selectedTheme.name}”?`)) return;
+    await run(async () => {
+      await deleteCompetitionTheme(selectedTheme.id);
+      setSelectedThemeId("");
+      setFaviconFile(null);
+      setBackgroundFile(null);
+      await queryClient.invalidateQueries({ queryKey: ["competition-themes", session!.user.id] });
+    }, "Theme deleted");
+  };
+
+  const applySelectedTheme = () => {
+    if (!selectedThemeId) {
+      void run(
+        () => applyCompetitionTheme(competitionId, null),
+        "LKK default applied",
+      );
+      return;
+    }
+    void saveTheme(true);
   };
 
   return (
@@ -177,7 +273,7 @@ function CompetitionAdmin() {
               size="sm"
               onClick={() => void setStatus(status)}
             >
-              {status}
+              {statusLabels[status]}
             </Button>
           ),
         )}
@@ -208,7 +304,7 @@ function CompetitionAdmin() {
             size="sm"
             onClick={() => setTab(item)}
           >
-            {item}
+            {tabLabels[item]}
           </Button>
         ))}
       </nav>
@@ -334,6 +430,10 @@ function CompetitionAdmin() {
               Save branding once and reuse it across competitions. Assets are public so scoreboard
               and climber links can load them without sign-in.
             </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              The built-in <strong className="text-foreground">LKK</strong> theme is used when no
+              custom theme is applied.
+            </p>
             <Field label="Reusable theme">
               <Select
                 className="mt-3"
@@ -344,7 +444,7 @@ function CompetitionAdmin() {
                   setBackgroundFile(null);
                 }}
               >
-                <option value="">Create a new theme / no theme</option>
+                <option value="">Create a new theme / use LKK default</option>
                 {themeList.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.name}
@@ -353,67 +453,10 @@ function CompetitionAdmin() {
               </Select>
             </Field>
             <form
+              id="competition-theme-form"
               key={`theme-form-${selectedThemeId}`}
               className="mt-3 grid gap-3 sm:grid-cols-2"
-              onSubmit={(event) => {
-                event.preventDefault();
-                const form = new FormData(event.currentTarget);
-                const name = String(form.get("themeName") ?? "").trim();
-                if (!name) {
-                  toast.error("Give the theme a name");
-                  return;
-                }
-                void (async () => {
-                  try {
-                    let saved: CompetitionTheme;
-                    if (selectedThemeId) {
-                      if (!selectedTheme) throw new Error("Theme is no longer available");
-                      saved = { ...selectedTheme, name };
-                      await updateCompetitionTheme(selectedThemeId, { name });
-                    } else {
-                      saved = await createCompetitionTheme(session!.user.id, name);
-                      setSelectedThemeId(saved.id);
-                    }
-                    const assetPatch: {
-                      favicon_path?: string;
-                      background_image_path?: string;
-                    } = {};
-                    if (faviconFile) {
-                      assetPatch.favicon_path = await uploadCompetitionThemeAsset(
-                        session!.user.id,
-                        saved.id,
-                        "favicon",
-                        faviconFile,
-                      );
-                    }
-                    if (backgroundFile) {
-                      assetPatch.background_image_path = await uploadCompetitionThemeAsset(
-                        session!.user.id,
-                        saved.id,
-                        "background",
-                        backgroundFile,
-                      );
-                    }
-                    if (Object.keys(assetPatch).length > 0) {
-                      await updateCompetitionTheme(saved.id, assetPatch);
-                    }
-                    if (form.get("applyTheme") === "on") {
-                      await applyCompetitionTheme(competitionId, saved.id);
-                    } else if (competition.theme_id === saved.id) {
-                      await applyCompetitionTheme(competitionId, null);
-                    }
-                    setFaviconFile(null);
-                    setBackgroundFile(null);
-                    await queryClient.invalidateQueries({
-                      queryKey: ["competition-themes", session!.user.id],
-                    });
-                    refresh();
-                    toast.success("Theme saved");
-                  } catch (error) {
-                    toast.error(error instanceof Error ? error.message : "Could not save theme");
-                  }
-                })();
-              }}
+              onSubmit={(event) => event.preventDefault()}
             >
               <Field label="Theme name">
                 <Input
@@ -456,36 +499,32 @@ function CompetitionAdmin() {
                   />
                 ) : null}
               </Field>
-              <label className="flex items-center gap-2 text-sm sm:col-span-2">
-                <input
-                  type="checkbox"
-                  name="applyTheme"
-                  defaultChecked={
-                    selectedThemeId !== "" && selectedThemeId === competition.theme_id
-                  }
-                />
-                Apply this theme to this competition
-              </label>
               <div className="flex flex-wrap gap-2 sm:col-span-2">
-                <Button type="submit">Save theme</Button>
-                {competition.theme_id ? (
+                <Button type="button" onClick={applySelectedTheme}>
+                  Apply theme
+                </Button>
+                {selectedThemeId ? (
                   <Button
                     type="button"
-                    variant="outline"
-                    onClick={() =>
-                      void run(() => applyCompetitionTheme(competitionId, null), "Theme removed")
-                    }
+                    variant="danger"
+                    onClick={() => void deleteTheme()}
                   >
-                    Use default theme
+                    Delete theme
                   </Button>
-                ) : null}
+                ) : (
+                  <Button type="button" variant="secondary" onClick={() => void saveTheme(false)}>
+                    Save theme
+                  </Button>
+                )}
               </div>
             </form>
             {theme ? (
               <p className="mt-2 text-xs text-muted-foreground">
                 Currently applied: {theme.name}
               </p>
-            ) : null}
+            ) : (
+              <p className="mt-2 text-xs text-muted-foreground">Currently applied: LKK (default)</p>
+            )}
           </Panel>
 
           <Panel>

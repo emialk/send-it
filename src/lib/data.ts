@@ -111,6 +111,11 @@ export async function updateCompetitionTheme(
   if (res.error) throw new Error(res.error.message);
 }
 
+export async function deleteCompetitionTheme(themeId: string): Promise<void> {
+  const res = await supabase.from("competition_themes").delete().eq("id", themeId);
+  if (res.error) throw new Error(res.error.message);
+}
+
 export async function uploadCompetitionThemeAsset(
   ownerId: string,
   themeId: string,
@@ -141,6 +146,7 @@ export async function applyCompetitionTheme(
 
 export function competitionThemeAssetUrl(path: string | null | undefined): string | null {
   if (!path) return null;
+  if (path.startsWith("/")) return path;
   return supabase.storage.from("competition-themes").getPublicUrl(path).data.publicUrl;
 }
 

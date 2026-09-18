@@ -85,7 +85,13 @@ export function Input({
   if (type === "date" || type === "file") {
     return (
       <input
-        className={cn(controlClass, className)}
+        className={cn(
+          controlClass,
+          type === "file"
+            ? "cursor-pointer p-1.5 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:font-semibold file:text-primary-foreground file:transition-colors hover:file:bg-primary/90"
+            : undefined,
+          className,
+        )}
         name={name}
         {...props}
         type={type}
