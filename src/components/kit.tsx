@@ -82,91 +82,39 @@ export function Input({
   required,
   ...props
 }: InputHTMLAttributes<HTMLInputElement>) {
-  if (type === "date") {
-    return (
-      <input
-        className={cn(controlClass, className)}
-        name={name}
-        {...props}
-        type={type}
-        defaultValue={defaultValue}
-        value={value}
-        disabled={disabled}
-        required={required}
-      />
-    );
-  }
-
-  return (
-    <EditableInput
-      className={className}
-      name={name}
-      defaultValue={defaultValue}
-      value={value}
-      type={type}
-      placeholder={placeholder}
-      disabled={disabled}
-      required={required}
-      {...props}
-    />
-  );
-}
-
-function EditableInput({
-  className,
-  name,
-  defaultValue,
-  value,
-  type,
-  placeholder,
-  disabled,
-  required,
-  ...props
-}: InputHTMLAttributes<HTMLInputElement>) {
-  const editorRef = useRef<HTMLDivElement>(null);
-  const valueRef = useRef<HTMLInputElement>(null);
-  const initialValue = String(value ?? defaultValue ?? "");
-  const inputMode = type === "number" ? "decimal" : type === "email" ? "email" : "text";
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (valueRef.current) valueRef.current.value = initialValue;
-  }, [initialValue]);
+    const input = inputRef.current;
+    if (!input) return;
 
-  function handleKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
-    if (event.key !== "Enter") return;
-    event.preventDefault();
-    event.currentTarget.closest("form")?.requestSubmit();
-  }
-
-  function handleInput() {
-    const text = editorRef.current?.textContent ?? "";
-    if (valueRef.current) {
-      valueRef.current.value =
-        type === "number" && text.trim() !== "" && !Number.isFinite(Number(text)) ? "" : text;
+    const isolateBrowserEvent = (event: Event) => {
+      event.stopImmediatePropagation();
+    };
+    const eventTypes = ["focus", "blur", "beforeinput", "input", "change", "keydown", "keyup"];
+    for (const eventType of eventTypes) {
+      input.addEventListener(eventType, isolateBrowserEvent, true);
     }
-  }
+    return () => {
+      for (const eventType of eventTypes) {
+        input.removeEventListener(eventType, isolateBrowserEvent, true);
+      }
+    };
+  }, []);
 
   return (
-    <>
-      <div
-        ref={editorRef}
-        contentEditable={!disabled}
-        role="textbox"
-        aria-disabled={disabled}
-        aria-required={required}
-        data-placeholder={placeholder}
-        tabIndex={disabled ? -1 : 0}
-        inputMode={inputMode}
-        className={cn(controlClass, "min-h-10", className)}
-        onKeyDown={handleKeyDown}
-        onInput={handleInput}
-        style={type === "password" ? { WebkitTextSecurity: "disc" } : undefined}
-        suppressContentEditableWarning
-      >
-        {initialValue}
-      </div>
-      <input ref={valueRef} type="hidden" name={name} disabled={disabled} {...props} />
-    </>
+    <input
+      ref={inputRef}
+      className={cn(controlClass, className)}
+      name={name}
+      {...props}
+      type={type}
+      placeholder={placeholder}
+      defaultValue={defaultValue}
+      value={value}
+      disabled={disabled}
+      required={required}
+    />
   );
 }
 
