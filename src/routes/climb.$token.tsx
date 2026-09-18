@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import { Button, Panel, StatusPill } from "@/components/kit";
 import { CompetitionTimer, useServerClock } from "@/components/CompetitionClock";
 import { DEFAULT_COMPETITION_THEME, useCompetitionTheme } from "@/components/CompetitionTheme";
-import { useCompetitionTheme } from "@/components/CompetitionTheme";
 import { fetchCompetitorContext, saveCompetitorResult } from "@/lib/data";
 import type { ClimbingRoute, RouteResult } from "@/lib/db-types";
 import { scoreCompetitor, scoreResult } from "@/lib/scoring";

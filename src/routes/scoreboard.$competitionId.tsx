@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { StatusPill } from "@/components/kit";
 import { CompetitionTimer, useServerClock } from "@/components/CompetitionClock";
 import { DEFAULT_COMPETITION_THEME, useCompetitionTheme } from "@/components/CompetitionTheme";
-import { useCompetitionTheme } from "@/components/CompetitionTheme";
 import { fetchCompetitionBundle, subscribeToCompetition } from "@/lib/data";
 import { rankCompetitors } from "@/lib/ranking";
 
