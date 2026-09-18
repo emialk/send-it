@@ -82,7 +82,7 @@ export function Input({
   required,
   ...props
 }: InputHTMLAttributes<HTMLInputElement>) {
-  if (type === "date") {
+  if (type === "date" || type === "file") {
     return (
       <input
         className={cn(controlClass, className)}
